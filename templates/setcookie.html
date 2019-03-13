@@ -1,0 +1,26 @@
+<% 
+    // set the browser Stay Logged In cookie via server-side template page scripting
+    // Setting the path does not seem to work. To be investigated.
+    templateContext.response.setHeader("Set-Cookie",templateContext.macros["@STAYLOGGEDIN_COOKIE@"]);
+    // templateContext.response.setHeader("Set-Cookie","stay=test; expires=Sat, 09 Feb 2019 11:14:03 GMT; path=/mga;");
+%>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>setcookie.html</title>
+        <script>
+			window.onload=function() {
+				// alert("stayloggedin cookie is set");
+				var form = document.getElementById("redirect_form");
+				form.submit();
+			}
+        </script>
+    </head>
+    <body>
+      <p>setting cookie and redirecting back to authn service....</p>
+      <form id="redirect_form" name="redirect_form" action="@ACTION@" method="POST">
+		<input type="hidden" name="operation" value="verify">
+		<input type="hidden" name="stayloggedin_cookie_set" value="true" />
+      </form>
+    </body>
+</html>

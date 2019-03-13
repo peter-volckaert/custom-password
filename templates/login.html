@@ -1,0 +1,78 @@
+<% 
+    // Delete the browser Stay Logged In cookie via server-side template page scripting
+    templateContext.response.setHeader("Set-Cookie",templateContext.macros["@DELETE_STAYLOGGEDIN_COOKIE@"]);  
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Custom Password Login</title>
+    <link rel="stylesheet" type="text/css" href="/sps/static/styles.css"></link>
+    <script type="text/javascript">
+	function onLoadPage() {
+		showError();
+		setFocus();
+	}
+	function showError() {
+		var elem = document.getElementById("errId");
+		if ("@ERROR_MESSAGE@" == "") {	
+			elem.setAttribute("class", "");
+		} else {
+			elem.setAttribute("class", "errorMessage");
+		}
+	}
+	function setFocus() {
+		document.getElementById("username").focus();
+	}	
+</script>
+  </head>
+  <body onload="onLoadPage()">
+    <div class="header">
+      <div class="brandingLogo"><img src="/sps/static/ibm-logo.png"></img></div>
+    </div>
+    <div class="content">
+      <div class="contentHeader">
+        <h1 class="pageTitle">Login</h1>
+        <div class="instructions">Enter your account ID and password.</div>
+      </div>
+      <div class="pageContent">
+        <div id="errId">@ERROR_MESSAGE@</div>
+        <form method="POST" action="@ACTION@">
+          <h2 class="sectionTitle">Login</h2>
+          <input type="hidden" name="operation" value="verify">
+          <table border="0" cellspacing="5" cellpadding="10">
+            <tbody>
+              <tr>
+                <td>
+                  <label class="vertical" for="username">Account ID:</label>
+                </td>
+                <td>
+                  <input id="username" type="text" name="username">
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label class="vertical" for="password">Password:</label>
+                </td>
+                <td>
+                  <input type="password" name="password">
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label class="vertical" for="stayloggedin">Stay Logged In:</label>
+                </td>
+                <td>
+                  <input type="checkbox" name="stayloggedin" value="true">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="controls">
+	        <input class="submitButton" type="submit" value="Login">
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
