@@ -53,11 +53,8 @@ switch (status) {
 	rc = verifyCookieSet();
 	if (rc != "ok") abortSession(rc);	
     break;
-  case "deleteGrantRequest":
-    deleteUserGrant();
-    break;
   case "logoutUserRequest":
-    logoutUser();
+    executeLogout();
     break;
   case "performTestRequest":
     performTest();
@@ -93,32 +90,46 @@ function performTest() {
 	return "ok";
 }
 
-function deleteUserGrant()
+function executeLogout()
 {
-	logmsg(INFO,"Entering deleteUserGrant()");
+	logmsg(INFO,"Entering executeLogout()");
 	
 	// Initialize this job
-	context.set(Scope.SESSION, "urn:custompassword", "status", "failedToDeleteGrant");
+	context.set(Scope.SESSION, "urn:custompassword", "status", "failedToExecuteLogout");
 	success.endPolicyWithoutCredential();
-
-	// First get the token from the user's credential
-	var token = context.get(Scope.REQUEST, "urn:ibm:security:asf:request:token:attribute", "customPassword"+COOKIE_NAME);
+	
+	// Must send the logout page to the user, where also the cookie will be deleted.
+	var setcookie = COOKIE_NAME+"=; Expires=Thu, 01 Jan 1970 00:00:00 GMT" + "; Path="+ COOKIE_PATH;
+	logmsg(DEBUG,"setcookie = " + setcookie);
+	macros.put("@DELETE_STAYLOGGEDIN_COOKIE@",setcookie);
+	macros.put("@USERNAME@",username);
+	page.setValue(PAGE_LOGOUT);
+	context.set(Scope.SESSION, "urn:custompassword", "status", "logoutPageSent");
+	
+	
+	// First get the token from the logout request parameter customPasswordToken
+	var token = context.get(Scope.REQUEST, "urn:ibm:security:asf:request:parameter", "customPasswordToken");
+	// var token = context.get(Scope.REQUEST, "urn:ibm:security:asf:request:token:attribute", "customPasswordToken");
 	if (token == null) {
 		// Seems like there's a config or other error
-		logmsg(ERROR,"no token in PAC from signoff command from WebSEAL.");
-		return "error-notokeninpac";
+		logmsg(ERROR,"no token in logout request.");
+		return "error-notokeninrequest";
 	}
-	logmsg(DEBUG,"token to delete = "+token);
+	logmsg(SENSI,"token to delete (not decoded) = "+token);
 	
 	// Next decrypt the token to get to the refresh token
+	
 	var decryptedToken = decodeURIComponent(token);
+	logmsg(SENSI,"token to delete (decoded    ) = " + decryptedToken);
+	// decryptedToken = token;
 	// Get the IV_CREDS encryption key
 	rc=getWebServiceData(WS_CONN_IVCREDS);
 	if (rc != "ok") return "error-getparams-ivcreds";
 	var ivcreds_enc_key=ws_pwd;
 	var decryptedToken = decrypt(decryptedToken, ivcreds_enc_key);
-	var decryptedToken = decryptedToken.toString(CryptoJS.enc.Utf8);
+	var decryptedToken = decryptedToken.toString(CryptoJS.enc.Utf8);	
 	logmsg(DEBUG,"decrypted token to delete = "+decryptedToken);
+	if (decryptedToken == "") return "error-decrypt-failed";
 
 	// Get and set URL, clientID and clientSecret
 	rc=getWebServiceData(WS_CONN_OAUTH);
@@ -155,19 +166,6 @@ function deleteUserGrant()
 	result = "ok";
 }
 
-function logoutUser()
-{
-	logmsg(INFO,"Entering logoutUser()");
-	
-	// Must send the logout page to the user, where also the cookie will be deleted.
-	var setcookie = COOKIE_NAME+"=; Expires=Thu, 01 Jan 1970 00:00:00 GMT" + "; Path="+ COOKIE_PATH;
-	logmsg(DEBUG,"setcookie = " + setcookie);
-	macros.put("@DELETE_STAYLOGGEDIN_COOKIE@",setcookie);
-	macros.put("@USERNAME@",username);
-	page.setValue(PAGE_LOGOUT);
-	context.set(Scope.SESSION, "urn:custompassword", "status", "logoutPageSent");
-	success.endPolicyWithoutCredential();
-}
 
 function abortSession(reason)
 {
@@ -376,10 +374,14 @@ function setStayLoggedInCookie() {
 			} else {
 				// Encrypt and encode the token but this time with the key for IV_CREDS
 				var ivcreds_value = encrypt(token, ws_pwd);
+				logmsg(SENSI,"ivcreds_value not URI encoded = " + ivcreds_value);
+
+				// Do _not_ encode since macro substitution will always encode the macro contents?
+				// See: https://www.ibm.com/support/knowledgecenter/SSPREK_9.0.6/com.ibm.isam.doc/wrp_config/concept/con_encod_macro_cont_auto_redir.html
 			    ivcreds_value = encodeURIComponent(ivcreds_value);
-				logmsg(SENSI,"ivcreds_value = " + ivcreds_value);
+				logmsg(SENSI,"ivcreds_value URI encoded     = " + ivcreds_value);
 				
-				context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPassword"+COOKIE_NAME,ivcreds_value);
+				context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPasswordToken",ivcreds_value);
 				macros.put("@STAYLOGGEDIN_COOKIE@",stayloggedin_cookie);
 				page.setValue("/authsvc/authenticator/custompassword/setcookie.html");
 				// Indicate that a page is sent to put the cookie
