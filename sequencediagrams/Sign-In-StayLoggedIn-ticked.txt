@@ -32,7 +32,7 @@ Proxy->Browser:
 note over Browser: -set cookie\n-auto POST to report completion
 Browser->Proxy: POST to report completion
 Proxy->Custom Password:
-note over Custom Password#lightblue:-set credential attribs:\n  -username to authenticated user\n  -customPasswordMechanism set to "password"\n-Done=>success.setValue(true)
+note over Custom Password#lightblue:-set credential attribs:\n  -username to authenticated user\n  -customPasswordMechanism set to "password-cookieset"\n  -customPasswordToken set to encrypted refresh token\n-Done=>success.setValue(true)
 Custom Password->Proxy:Report "done"
 note over Proxy: build authenticated session
 Proxy->Browser: set PD_S_SESSION_ID
