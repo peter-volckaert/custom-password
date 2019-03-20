@@ -1,0 +1,23 @@
+title Sign In - With cookie
+autonumber 
+actor User
+participant Browser
+participant Proxy
+participant Custom Password#lightblue
+lifelinecolor Custom Password #blue
+participant OAuth Endpoint
+database LDAP
+
+
+User->Browser:Clicks link to sign in\n/mga/sps/authsvc/policy/custompassword
+Browser->Proxy:request incl. cookie
+Proxy->Custom Password: 
+note over Custom Password#lightblue:-read Cookie HTTP header\n-filter out stayloggedin cookie\n-read encryption key from Server Conn\n-decrypt cookie content=>refresh token
+Custom Password->Proxy:request to **/introspect**\nwith refresh token
+Proxy-> OAuth Endpoint:
+OAuth Endpoint->Proxy:introspect result\nincludes: username,scope,active
+Proxy->Custom Password:
+note over Custom Password#lightblue: -verify if "active"\n-verify if scope == incoming User-Agent\n-If all ok: set credential attribs:\n  -username as found in introspect result \n  -customPasswordMechanism set to "cookie"\n-Done=>success.setValue(true)  
+Custom Password->Proxy:Report "done"
+note over Proxy: build authenticated session
+Proxy->Browser: set PD_S_SESSION_ID
