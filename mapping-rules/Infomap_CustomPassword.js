@@ -86,7 +86,7 @@ function performTest() {
 	macros.put("@TEST_MESSAGE@",encrypted+"<br>"+encrypted_enc+"<br>"+encrypted_dec+"<br>"+decrypted.toString(CryptoJS.enc.Utf8));
 	page.setValue(PAGE_TEST);
 	success.endPolicyWithoutCredential();
-	context.set(Scope.SESSION, "urn:custompassword", "status", "testPerformed");
+	state.put("state", "testPerformed");
 	return "ok";
 }
 
@@ -95,7 +95,7 @@ function executeLogout()
 	logmsg(INFO,"Entering executeLogout()");
 	
 	// Initialize this job
-	context.set(Scope.SESSION, "urn:custompassword", "status", "failedToExecuteLogout");
+	state.put("state", "failedToExecuteLogout");
 	success.endPolicyWithoutCredential();
 	
 	// Must send the logout page to the user, where also the cookie will be deleted.
@@ -104,7 +104,7 @@ function executeLogout()
 	macros.put("@DELETE_STAYLOGGEDIN_COOKIE@",setcookie);
 	macros.put("@USERNAME@",username);
 	page.setValue(PAGE_LOGOUT);
-	context.set(Scope.SESSION, "urn:custompassword", "status", "logoutPageSent");
+	state.put("state", "logoutPageSent");
 	
 	
 	// First get the token from the logout request parameter customPasswordToken
@@ -153,7 +153,7 @@ function executeLogout()
 		var body = hr.getBody();
 		logmsg(DEBUG,"got a response body: " + body);
 		if (rc == 200) {
-			context.set(Scope.SESSION, "urn:custompassword", "status", "grantDeleted");
+			state.put("state", "grantDeleted");
 			logmsg(INFO,"Successfully deleted the user's grant");
 		} else {
 			logmsg(ERROR,"HTTP response code from /revoke is " + rc);
@@ -236,7 +236,7 @@ function validateCredentials() {
 	// Authenticate the user by verifying the username & password
 	
 	var userLookupHelper = new UserLookupHelper();
-	
+
 	// Use the AAC Username/Password mechanism setting to init the helper: so set to init(true)
 	userLookupHelper.init(true);
 	if(userLookupHelper.isReady()) {		
@@ -375,17 +375,14 @@ function setStayLoggedInCookie() {
 				// Encrypt and encode the token but this time with the key for IV_CREDS
 				var ivcreds_value = encrypt(token, ws_pwd);
 				logmsg(SENSI,"ivcreds_value not URI encoded = " + ivcreds_value);
-
-				// Do _not_ encode since macro substitution will always encode the macro contents?
-				// See: https://www.ibm.com/support/knowledgecenter/SSPREK_9.0.6/com.ibm.isam.doc/wrp_config/concept/con_encod_macro_cont_auto_redir.html
 			    ivcreds_value = encodeURIComponent(ivcreds_value);
 				logmsg(SENSI,"ivcreds_value URI encoded     = " + ivcreds_value);
 				
 				context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPasswordToken",ivcreds_value);
 				macros.put("@STAYLOGGEDIN_COOKIE@",stayloggedin_cookie);
-				page.setValue("/authsvc/authenticator/custompassword/setcookie.html");
+				page.setValue(PAGE_SETCOOKIE);
 				// Indicate that a page is sent to put the cookie
-				context.set(Scope.SESSION, "urn:custompassword", "status", "Set-CookiePageSent");
+				state.put("state", "Set-CookiePageSent");
 				context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "username", username);
 				success.setValue(false);
 				result="ok";
@@ -404,7 +401,7 @@ function authenticateUser()
 		rc=validateCredentials();
 		if (rc == "ok" && stayloggedin_set != "true") {
 			// user has been successfully authenticated, but does not want to stay logged in/ We're done here.
-			context.set(Scope.SESSION, "urn:custompassword", "status", "userAuthenticatedWithPassword");
+			state.put("state", "userAuthenticatedWithPassword");
 			context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPasswordMechanism", "password");
 			context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "username", username);
 			success.setValue(true);
@@ -422,7 +419,7 @@ function sendLoginForm (reason)
 	logmsg(DEBUG,"setcookie = " + setcookie);
 	macros.put("@DELETE_STAYLOGGEDIN_COOKIE@",setcookie);
 	page.setValue(PAGE_LOGIN);
-	context.set(Scope.SESSION, "urn:custompassword", "status", "loginFormSent");
+	state.put("state", "loginFormSent");
 	success.setValue(false);
 }
 
@@ -431,7 +428,7 @@ function getStatus ()
 	logmsg(INFO,"Entering getStatus()");
 
 	// status contains this session's status, username and type of request
-	status=context.get(Scope.SESSION, "urn:custompassword", "status");
+	status=state.get("state");
 	username=context.get(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "username");
 	request=context.get(Scope.REQUEST, "urn:ibm:security:asf:request:parameter", "request");
 
@@ -443,9 +440,6 @@ function getStatus ()
 			// A new session for authenticating the user starts
 			status = "startingLogonSession";
 			username = "--unknown--";
-		} else if (request_param == "deleteGrant") {
-			logmsg(INFO,"Request received to logout the user by revoking the OAuth token");
-			status = "deleteGrantRequest";
 		} else if (request_param == "logoutUser") {
 			logmsg(INFO,"Request received to logout the user by removing the "+COOKIE_NAME+" cookie");
 			// There should also be a parameter "user" that contains the username
@@ -498,7 +492,8 @@ function verifyCookieSet()
 	if (cookie_set == "true") {
 		// all is good, user is authenticated and cookie is set
 		logmsg(INFO,"Received confirmation that cookie is set. All done.");
-		context.set(Scope.SESSION, "urn:custompassword", "status", "userAuthenticatedWithCredsAndCookieSet");
+		state.put("state", "userAuthenticatedWithCredsAndCookieSet");
+		context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPasswordMechanism", "password-cookieset");
 		context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "username", username);
 		success.setValue(true);
 		result = "ok";
@@ -543,7 +538,7 @@ function validateCookie()
 	if (stayloggedin_cookie_value == "") {
 		// No cookie, no logon
 		logmsg(INFO,"no stayloggedin cookie found.");
-		context.set(Scope.SESSION, "urn:custompassword", "status", "cookieMissing");
+		state.put("state", "cookieMissing");
 		result="nocookie";
 	} else {
 		// So there is a stayloggedin cookie.
@@ -613,7 +608,7 @@ function validateToken(token) {
 						} else {
 							// All is fine
 							logmsg(INFO,"All good. useragent in scope = useragent of request = "+useragent);
-							context.set(Scope.SESSION, "urn:custompassword", "status", "userAuthenticatedWithCookie");
+							state.put("state", "userAuthenticatedWithCookie");
 							context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "username", username);
 							context.set(Scope.SESSION, "urn:ibm:security:asf:response:token:attributes", "customPasswordMechanism", "cookie");
 							success.setValue(true);
