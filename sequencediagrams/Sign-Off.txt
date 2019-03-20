@@ -1,0 +1,28 @@
+title Sign-Off
+autonumber 
+actor User
+participant Browser
+participant Proxy
+participant Custom Password#lightblue
+lifelinecolor Custom Password #blue
+participant OAuth Endpoint
+database LDAP
+
+
+User->Browser:Clicks link to sign off\n/pkmslogout
+Browser->Proxy:
+Proxy->Browser:reply with logout-custompassword.html
+note over Browser:-redirect to Custom Password with params:\n  -**request=logoutUser**\n  -**username**=%USERNAME%\n  -**customPasswordToken**=\n      %CREDATTR{customPasswordToken}%
+Browser->Proxy: request user logout to\n/mga/sps/authsvc/policy/custompassword
+Proxy->Custom Password:
+note over Custom Password#lightblue:-reply with logout.html to delete cookie
+Custom Password->Proxy:
+Proxy->Browser:
+note over Browser:-delete stayloggedin cookie\n-show logout message
+note over Custom Password#lightblue:-read param customPasswordToken\n-read encryption key from Server Conn\n-decrypt cookie content=>refresh token
+Custom Password->Proxy:request to **/revoke**\nwith refresh token
+Proxy-> OAuth Endpoint:
+note over OAuth Endpoint: delete OAuth grant
+OAuth Endpoint->Proxy:revoke result
+Proxy->Custom Password:
+note over Custom Password#lightblue: -Done=>success.endPolicyWithoutCredential()
