@@ -1,0 +1,39 @@
+title Sign In - StayLoggedIn ticked
+autonumber 
+actor User
+participant Browser
+participant Proxy
+participant Custom Password#lightblue
+lifelinecolor Custom Password #blue
+participant OAuth Endpoint
+database LDAP
+
+
+User->Browser:Clicks link to sign in\n/mga/sps/authsvc/policy/custompassword
+Browser->Proxy: request w/o cookie
+Proxy->Custom Password: 
+note over Custom Password#lightblue: sent login form
+Custom Password->Proxy: reply with <color:#blue>login.html</color>
+Proxy->Browser:
+note over Browser: - delete cookie\n- show password form
+User->Browser: submit uid & password\nStayLoggedIn ticked
+Browser->Proxy:POST form parameters
+Proxy->Custom Password:
+Custom Password<->LDAP:search user in registry
+Custom Password<->LDAP:authenticate user
+note over Custom Password#lightblue:-read OAuth client creds\nfrom Server Connection\n-calculate 12-digit random PIN
+Custom Password->Proxy:\nROPC request to **/token**
+Proxy->OAuth Endpoint:
+note over OAuth Endpoint: -verify if client_id is Custom Password's\nunique client_id\n-store grant incl. PIN\n-max 5 grants/user (LRU)\n-no registry validation\n-refresh token validity=e.g.14 days\n-access token validity=1 second
+OAuth Endpoint->Proxy:**refresh token**+access token
+Proxy->Custom Password:
+note over Custom Password#lightblue: -read encryption key\nfrom Server Connection\n-encrypt refresh token,\n-construst cookie 
+Custom Password->Proxy:reply with <color:#blue>setcookie.html</color>
+Proxy->Browser:
+note over Browser: -set cookie\n-auto POST to report completion
+Browser->Proxy: POST to report completion
+Proxy->Custom Password:
+note over Custom Password#lightblue:-set credential attribs:\n  -username to authenticated user\n  -customPasswordMechanism to "password-cookieset"\n-Done=>success.setValue(true)
+Custom Password->Proxy:Report "done"
+note over Proxy: build authenticated session
+Proxy->Browser: set PD_S_SESSION_ID

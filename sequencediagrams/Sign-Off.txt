@@ -1,0 +1,28 @@
+title Sign-Off
+autonumber 
+actor User
+participant Browser
+participant Proxy
+participant Custom Password#lightblue
+lifelinecolor Custom Password #blue
+participant OAuth Endpoint
+
+
+
+User->Browser:Clicks link to sign off\n/pkmslogout
+Browser->Proxy:
+Proxy->Browser:reply with <color:#blue>logout-custompassword.html</color>
+note over Browser:-redirect to Custom Password with params:\n    -**request=logoutUser**\n    -**username**=%USERNAME%\n-includes stayloggedin cookie
+Browser->Proxy: request user logout to\n/mga/sps/authsvc/policy/custompassword
+Proxy->Custom Password:
+note over Custom Password#lightblue:-read encryption key from Server Connection\n-decrypt cookie content=>refresh token
+Custom Password->Proxy:request to **/revoke**\nwith refresh token
+Proxy-> OAuth Endpoint:
+note over OAuth Endpoint: delete OAuth grant
+OAuth Endpoint->Proxy:revoke result
+Proxy->Custom Password:
+
+note over Custom Password#lightblue:-Done=>success.endPolicyWithoutCredential()\n-reply with logout.html to delete cookie
+Custom Password->Proxy:reply with <color:#blue>logout.html</color>
+Proxy->Browser:
+note over Browser:-delete stayloggedin cookie\n-show logout message
