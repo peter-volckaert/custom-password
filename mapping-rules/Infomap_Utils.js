@@ -1,10 +1,8 @@
 importClass(Packages.com.ibm.security.access.server_connections.ServerConnectionFactory);
 importClass(Packages.com.tivoli.am.fim.trustserver.sts.utilities.IDMappingExtUtils);
 
-// Global variables related to function getWebServiceData()
-var ws_url;
-var ws_user;
-var ws_pwd;
+// tracemsg is a global variable used by logmsg(). It contains the accumulated messages
+var tracemsg="";
 
 function logmsg(msglevel,msg)
 {
@@ -97,15 +95,16 @@ function getWebServiceData(name)
 	var wconn = ServerConnectionFactory.getWebConnectionByName(name);
 	if (wconn == null) {
 		IDMappingExtUtils.traceString("Failed to get connection data for "+name);
-		result=false;
+		var result="getFailed";
 	} else {
-		ws_url = wconn.getUrl()+"";
-		ws_user= wconn.getUser()+"";
-		ws_pwd = wconn.getPasswd()+"";
+		var ws_url = wconn.getUrl()+"";
+		var ws_user= wconn.getUser()+"";
+		var ws_pwd = wconn.getPasswd()+"";
 		IDMappingExtUtils.traceString("ws_url="+ws_url+",ws_user="+ws_user+",ws_pwd=Sorry, cannot show here");
-		result="ok";
+		var result="ok";
 	}
-	return result;
+	// return an object with 4 labels: url, password, user and result.
+	return { url: ws_url, password: ws_pwd, user: ws_user, result: result };
 }
 
 /**

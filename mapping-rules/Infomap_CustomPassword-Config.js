@@ -13,10 +13,10 @@ const PAGE_LOGOUT=PAGE_FOLDER+"logout.html";
 // Configuration related to Server Connections
 const WS_CONN_OAUTH="Custom Password OAuth";
 const WS_CONN_COOKIE="Custom Password Cookie";
-const WS_CONN_IVCREDS="Custom Password IV-CREDS";
 
 // Configuration related to OAuth
 const TOKEN_PIN_LENGTH=12;
+const OAUTH_SCOPE="stayloggedin";
 
 // Configuration related to the cookie
 const COOKIE_NAME="stayloggedin";

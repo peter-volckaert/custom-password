@@ -11,6 +11,28 @@ importClass(Packages.com.ibm.security.access.httpclient.Parameters);
 importClass(Packages.java.util.ArrayList);
 importClass(Packages.java.util.HashMap);
 
+importMappingRule("CustomPassword-Config");
+importMappingRule("Utils");
+
+/**
+ * Verifying the calling client_id: only the "Custom Password" client should call this rule
+ */
+temp_attr = stsuu.getContextAttributes().getAttributeValuesByNameAndType("client_id", "urn:ibm:names:ITFIM:oauth:body:param");
+if (temp_attr != null && temp_attr.length > 0) {
+    calling_client_id = temp_attr[0];
+    IDMappingExtUtils.traceString("calling_client_id="+calling_client_id);
+    // Get clientID from Server Connection
+    var wsdata=getWebServiceData(WS_CONN_OAUTH);
+    if (wsdata.result != "ok") OAuthMappingExtUtils.throwSTSUserMessageException("Failed to read Server Connection "+WS_CONN_OAUTH);
+    var custompassword_client_id = wsdata.user;
+    IDMappingExtUtils.traceString("custompassword_client_id="+custompassword_client_id);
+    if (calling_client_id != custompassword_client_id)
+    {
+        // Only the Custom Password OAuth client should use this rule!
+	OAuthMappingExtUtils.throwSTSUserMessageException("Invalid OAuth client");
+    }
+}
+
 /**
  * This mapping rule uses a user registry for verification of the username 
  * and password for the ROPC scenario.
@@ -29,7 +51,7 @@ importClass(Packages.java.util.HashMap);
  * to "false".
  */
 
-var ropc_registry_validation = false;
+var ropc_registry_validation = true;
 
 /*
  * Force sourcing the ROPC password validation config from ldap.conf. This should be set
